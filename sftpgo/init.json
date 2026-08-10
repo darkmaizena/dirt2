@@ -1,0 +1,16 @@
+{
+  "users": [
+    {
+      "username": "dirt",
+      "password": "dirt",
+      "status": 1,
+      "home_dir": "/srv/ghosts",
+      "permissions": {
+        "/": ["list", "download", "upload", "overwrite", "create_dirs"]
+      },
+      "filters": {
+        "max_upload_file_size": 32768
+      }
+    }
+  ]
+}

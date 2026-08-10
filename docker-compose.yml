@@ -1,0 +1,49 @@
+# Dirt 2 tournament server + dashboard + sftpgo ghost storage.
+# Ports are published directly on the host. Set DIRT2_ADVERTISED_ADDRESS in .env
+# to the address the console connects to (the host's public/LAN IP).
+services:
+  dirt2-server:
+    build: .
+    env_file: .env
+    ports:
+      - "31020:31020/udp"   # authentication
+      - "31021:31021/udp"   # secure
+    volumes:
+      - ./data:/app/dirtnet/data      # SQLite: accounts, tournaments, stats (WAL)
+      - ./logs:/app/dirtnet/logs
+    restart: unless-stopped
+
+  dashboard:
+    build: .
+    command: python -m tools.dashboard
+    ports:
+      - "8091:8091"
+    volumes:
+      - ./data:/app/dirtnet/data      # shared DB, RW for SQLite lock/-wal files
+      - ./ghosts:/ghosts:ro
+    restart: unless-stopped
+
+  sftpgo:
+    image: drakkan/sftpgo:v2
+    command: sftpgo serve --log-level info
+    env_file: .env
+    ports:
+      - "${SFTP_PORT}:${SFTP_PORT}"
+    environment:
+      SFTPGO_SFTPD__BINDINGS__0__PORT: ${SFTP_PORT}
+      SFTPGO_LOADDATA_FROM: /srv/init/init.json
+      SFTPGO_LOADDATA_MODE: "0"
+      # PS3's legacy SSH client only speaks SHA1 KEX / CBC ciphers / hmac-sha1 /
+      # ssh-rsa host key. Offer legacy + modern so the console can negotiate.
+      SFTPGO_SFTPD__KEX_ALGORITHMS: "curve25519-sha256,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,diffie-hellman-group14-sha256,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1"
+      SFTPGO_SFTPD__CIPHERS: "aes128-ctr,aes256-ctr,aes128-cbc,aes256-cbc,3des-cbc"
+      SFTPGO_SFTPD__MACS: "hmac-sha2-256,hmac-sha1,hmac-sha1-96"
+      SFTPGO_SFTPD__HOST_KEY_ALGORITHMS: "rsa-sha2-256,rsa-sha2-512,ssh-rsa,ecdsa-sha2-nistp256,ssh-ed25519"
+    volumes:
+      - ./ghosts:/srv/ghosts                # ghost files (console up/downloads here)
+      - ./sftpgo/init.json:/srv/init/init.json:ro
+      - sftpgo-data:/var/lib/sftpgo
+    restart: unless-stopped
+
+volumes:
+  sftpgo-data:

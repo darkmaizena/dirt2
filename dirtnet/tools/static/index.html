@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DiRT 2 — Tournaments</title>
+<style>
+  /* Neubrutalism in DiRT 2's neon palette: lime / pink / cyan */
+  :root{
+    --bg:#dcdfd2; --panel:#151813; --ink:#eafce0; --muted:#8ea883;
+    --green:#8ed600; --blue:#14c8ff; --pink:#ec008c; --gray:#828a7d; --line:#000;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#20241b;
+    font:15px/1.45 "Arial Black",Arial,Helvetica,sans-serif;padding:24px}
+  .wrap{max-width:980px;margin:0 auto}
+  .headboard{display:flex;align-items:center;gap:18px;margin:0 0 20px;padding:20px 24px;
+    background:linear-gradient(100deg,var(--green) 0%,var(--blue) 100%);
+    border:3px solid #000;box-shadow:8px 8px 0 #000}
+  .headboard .logo{height:88px;width:auto;display:block;border:3px solid #000;
+    box-shadow:4px 4px 0 #000}
+  h1{font-size:38px;margin:0;letter-spacing:1px;text-transform:uppercase;line-height:1;
+    color:#0b0f08;-webkit-text-stroke:1px #000}
+  .tagline{font-weight:900;text-transform:uppercase;letter-spacing:3px;font-size:13px;
+    color:#0b0f08;margin-top:5px;opacity:.85}
+  .sub{color:#4b5344;font-weight:bold;text-transform:uppercase;font-size:12px;
+    letter-spacing:1px;margin:6px 0 18px}
+  .tabs{display:flex;gap:8px;margin:0 0 22px;flex-wrap:wrap}
+  .tabs button{font:inherit;font-weight:900;text-transform:uppercase;font-size:12px;
+    letter-spacing:1px;padding:8px 15px;border:3px solid #000;background:#0b0f08;
+    color:var(--muted);cursor:pointer;box-shadow:3px 3px 0 #000}
+  .tabs button.on{background:var(--green);color:#0b0f08}
+  .hero{display:flex;justify-content:center;margin-bottom:22px}
+  .grid.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+  .card{background:var(--panel);border:3px solid var(--line);box-shadow:6px 6px 0 #000;
+    padding:16px;color:var(--ink)}
+  .card.active{border-color:var(--green);box-shadow:10px 10px 0 var(--green);
+    max-width:720px;width:100%;padding:22px 26px}
+  .card.active h2{font-size:27px} .card.active .rem{font-size:40px}
+  .card.prev{border-color:var(--gray);box-shadow:6px 6px 0 var(--gray)}
+  .card.up{border-color:var(--blue);box-shadow:6px 6px 0 var(--blue)}
+  .badge{display:inline-block;background:var(--green);color:#0b0f08;font-weight:900;
+    text-transform:uppercase;font-size:12px;letter-spacing:1.5px;padding:4px 11px;
+    border:3px solid #000;box-shadow:3px 3px 0 #000}
+  .badge.prev{background:var(--gray);color:#12140f} .badge.up{background:var(--blue);color:#03141a}
+  h2{font-size:20px;margin:12px 0 2px;text-transform:uppercase;color:var(--green)}
+  .idn{color:var(--muted);font-size:13px}
+  .rules{color:#d6e4c8;font-weight:bold;margin:6px 0 10px}
+  .rembar{margin:10px 0}
+  .rem{font-size:30px;font-weight:900;color:var(--green);-webkit-text-stroke:1px #000;
+    font-variant-numeric:tabular-nums}
+  .remlabel{color:var(--muted);font-size:10px;font-weight:bold;text-transform:uppercase;
+    letter-spacing:2px;margin-left:4px}
+  .when{color:var(--muted);font-size:12px;font-weight:bold}
+  .prizes{margin:10px 0;border:2px solid #000;background:#0b0f08}
+  .ptitle{background:var(--pink);color:#150109;font-size:11px;font-weight:900;
+    text-transform:uppercase;letter-spacing:1px;padding:2px 8px}
+  .prow{display:flex;justify-content:space-between;padding:3px 8px;border-top:1px solid #23271e}
+  .pplace{color:var(--muted);text-transform:uppercase;font-size:12px}
+  .pamt{color:var(--green);font-weight:900}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th{background:#0b0f08;color:var(--muted);text-transform:uppercase;font-size:11px;
+    text-align:left;padding:5px 8px;border:2px solid #000}
+  td{padding:5px 8px;border:2px solid #000;font-weight:bold;color:var(--ink)}
+  td.rk{width:34px;text-align:center;padding:3px}
+  .rk{display:inline-block;width:24px;height:24px;line-height:22px;font-weight:900;
+    border:2px solid #000;color:#0b0f08}
+  .rk1{background:var(--pink)} .rk2{background:var(--blue)}
+  .rk3{background:var(--green)} .rkn{background:var(--gray)}
+  td.s{text-align:right;font-variant-numeric:tabular-nums;color:var(--blue)}
+  tr:nth-child(even) td{background:#12160f}
+  .none{color:#5f6a55;font-style:italic;font-weight:bold;padding:8px 0}
+  h3{margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;color:#20241b;
+    border-bottom:3px solid var(--green);padding-bottom:6px}
+  .hist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .h{background:var(--panel);border:3px solid #000;box-shadow:4px 4px 0 var(--gray);
+    padding:12px;color:var(--ink)}
+  .narrow{max-width:520px}
+  .muted{color:var(--muted);font-size:12px}
+  .foot{margin:36px 0 0;padding-top:14px;border-top:3px solid #000;display:flex;
+    justify-content:space-between;align-items:center;font-size:12px;font-weight:bold;
+    text-transform:uppercase;letter-spacing:1px;color:#4b5344}
+  .foot a{color:#20241b;text-decoration:none;border-bottom:2px solid var(--green)}
+  .foot a:hover{color:var(--pink)}
+  .ver{color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="app" class="wrap">
+  <div class="headboard">
+    <img src="/dirt2-logo.jpg" alt="DiRT 2" class="logo"
+         onerror="this.replaceWith(Object.assign(document.createElement('h1'),{textContent:'DiRT 2'}))">
+    <div class="tagline">Tournaments</div>
+  </div>
+  <div class="sub" v-if="!s">Loading…</div>
+
+  <div class="tabs">
+    <button :class="{on:tab==='now'}" @click="tab='now'">Now</button>
+    <button :class="{on:tab==='ended'}" @click="tab='ended'">Ended</button>
+    <button :class="{on:tab==='replays'}" @click="tab='replays'">Replays</button>
+    <button :class="{on:tab==='players'}" @click="tab='players'">Players</button>
+  </div>
+
+  <!-- NOW -->
+  <template v-if="tab==='now' && s">
+    <div class="hero">
+      <div class="card active">
+        <span class="badge">Active Now</span>
+        <div v-html="head(s.active)"></div>
+        <div class="rembar"><span class="rem">{{ fmtTime(s.active.remaining_s) }}</span>
+          <span class="remlabel">D:HH:MM:SS left</span></div>
+        <div class="when">{{ s.active.start }}–{{ s.active.end }}</div>
+        <div v-html="prizes(s.active.prizes)"></div>
+        <div v-html="board(s.active.board)"></div>
+      </div>
+    </div>
+    <div class="grid two">
+      <div class="card prev">
+        <span class="badge prev">Previous</span>
+        <div v-html="head(s.history[0])"></div>
+        <div class="when">{{ s.history[0].start }}–{{ s.history[0].end }}</div>
+        <div v-html="prizes(s.history[0].prizes)"></div>
+        <div v-html="board(s.history[0].board)"></div>
+      </div>
+      <div class="card up">
+        <span class="badge up">Upcoming</span>
+        <div v-html="head(s.upcoming)"></div>
+        <div class="when">{{ s.upcoming.start }}–{{ s.upcoming.end }}</div>
+        <div v-html="prizes(s.upcoming.prizes)"></div>
+        <div v-html="board(s.upcoming.board)"></div>
+      </div>
+    </div>
+  </template>
+
+  <!-- ENDED -->
+  <template v-if="tab==='ended' && s">
+    <h3>Ended tournaments</h3>
+    <div class="hist">
+      <div class="h" v-for="t in s.history" :key="t.window">
+        <div class="when">{{ t.started }} – {{ t.ended }}</div>
+        <h2 style="font-size:16px">{{ t.title }} <span class="idn">#{{ t.id }}</span></h2>
+        <div v-html="board(t.board, 5)"></div>
+      </div>
+    </div>
+  </template>
+
+  <!-- REPLAYS -->
+  <template v-if="tab==='replays'">
+    <h3>Replays</h3>
+    <div v-if="!replays.length" class="none">no replays uploaded</div>
+    <table v-else>
+      <tr><th>Player</th><th>Track</th><th>Car</th><th>Discipline</th>
+        <th class="s">Size</th><th>When</th></tr>
+      <tr v-for="(r, i) in replays" :key="i">
+        <td>{{ r.user }}</td><td>{{ r.track }}</td><td>{{ r.car || '—' }}</td>
+        <td>{{ r.discipline || '—' }}</td>
+        <td class="s">{{ fmtSize(r.size) }}</td>
+        <td class="muted">{{ fmtWhen(r.modified) }}</td>
+      </tr>
+    </table>
+  </template>
+
+  <!-- PLAYERS -->
+  <template v-if="tab==='players' && s">
+    <h3>Most active players</h3>
+    <div v-if="!s.participation || !s.participation.length" class="none">no players yet</div>
+    <table v-else class="narrow">
+      <tr><th>#</th><th>Player</th><th class="s">Tournaments</th></tr>
+      <tr v-for="(p, i) in s.participation" :key="p.principal">
+        <td class="rk"><span class="rk" :class="i<3?'rk'+(i+1):'rkn'">{{ i + 1 }}</span></td>
+        <td>{{ p.name }}</td><td class="s">{{ p.count }}</td>
+      </tr>
+    </table>
+  </template>
+
+  <footer class="foot">
+    <a href="https://github.com/darkmaizena" target="_blank" rel="noopener">github.com/darkmaizena</a>
+    <span class="ver">v0.1</span>
+  </footer>
+</div>
+
+<script src="/vue.global.js"></script>
+<script>
+const { createApp, ref, onMounted } = Vue;
+createApp({
+  setup() {
+    const s = ref(null);
+    const tab = ref('now');
+    const replays = ref([]);
+    const esc = v => String(v).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    const pad = n => String(n).padStart(2,'0');
+    function fmtTime(sec){
+      sec = Math.max(0, sec|0);
+      const d = Math.floor(sec/86400); sec%=86400;
+      const h = Math.floor(sec/3600); sec%=3600;
+      const m = Math.floor(sec/60); const s2 = sec%60;
+      return `${d}:${pad(h)}:${pad(m)}:${pad(s2)}`;
+    }
+    function fmtDur(sec){
+      const m = Math.floor((sec||0)/60), s2 = (sec||0)%60;
+      return s2 ? `${m}m ${s2}s` : `${m}m`;
+    }
+    function fmtSize(b){ return b == null ? '—' : (b/1024).toFixed(1)+' KB'; }
+    function fmtWhen(ts){ return ts ? new Date(ts*1000).toLocaleString() : '—'; }
+    function head(t){
+      if(!t) return '';
+      return `<h2>${esc(t.title)}</h2><div class="rules">${esc(t.rules)}</div>`;
+    }
+    function prizes(list){
+      if(!list || !list.length) return '';
+      let h = '<div class="prizes"><div class="ptitle">Prizes</div>';
+      for(const p of list){
+        h += `<div class="prow"><span class="pplace">${esc(p.place)}</span>` +
+             `<span class="pamt">${esc(p.amount)} ${esc(p.kind)}</span></div>`;
+      }
+      return h + '</div>';
+    }
+    function board(rows, max){
+      if(!rows || !rows.length) return '<div class="none">no entries</div>';
+      let h = '<table><tr><th>#</th><th>Player</th><th class="s">Score</th></tr>';
+      for(const r of rows.slice(0, max||99)){
+        const sc = r.score === null ? '<span class="none">—</span>' : esc(r.score);
+        const rk = r.rank <= 3 ? 'rk'+r.rank : 'rkn';
+        h += `<tr><td class="rk"><span class="rk ${rk}">${r.rank}</span></td>` +
+             `<td>${esc(r.name)}</td><td class="s">${sc}</td></tr>`;
+      }
+      return h + '</table>';
+    }
+    async function load(){
+      try { s.value = await (await fetch('/api/state')).json(); } catch(e){}
+    }
+    async function loadReplays(){
+      try { replays.value = await (await fetch('/api/replays')).json(); } catch(e){}
+    }
+    onMounted(() => {
+      load(); loadReplays();
+      setInterval(load, 1000);
+      setInterval(loadReplays, 5000);
+    });
+    return { s, tab, replays, head, board, prizes, fmtTime, fmtDur, fmtSize, fmtWhen };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
