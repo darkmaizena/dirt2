@@ -2,7 +2,7 @@
 # Ports are published directly on the host. Set DIRT2_ADVERTISED_ADDRESS in .env
 # to the address the console connects to (the host's public/LAN IP).
 services:
-  dirt2-server:
+  server:
     build: .
     env_file: .env
     ports:
@@ -23,10 +23,22 @@ services:
       - ./ghosts:/ghosts:ro
     restart: unless-stopped
 
+  # Fix ghost-dir ownership (bind mount is root-owned; sftpgo runs as uid 1000).
+  sftpgo-init:
+    image: drakkan/sftpgo:v2
+    user: "0:0"
+    command: sh -c "chown -R 1000:1000 /srv/ghosts || true"
+    volumes:
+      - ./ghosts:/srv/ghosts
+    restart: "no"
+
   sftpgo:
     image: drakkan/sftpgo:v2
     command: sftpgo serve --log-level info
     env_file: .env
+    depends_on:
+      sftpgo-init:
+        condition: service_completed_successfully
     ports:
       - "${SFTP_PORT}:${SFTP_PORT}"
     environment:
