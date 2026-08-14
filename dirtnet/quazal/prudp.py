@@ -269,8 +269,8 @@ class PRUDPSession:
         self.connected = False
         self.pid = None         # authenticated principal id (from secure CONNECT)
         self._fragments = []    # reassembly buffer for fragmented DATA
-        # highest reliable-DATA seq processed; seq <= this is a retransmit
-        self._recv_high = 0
+        self._reorder = {}      # out-of-order DATA held (seq -> packet) until the gap fills
+        self._recv_synced = False  # latch seq_in_expected to the first DATA seq seen
 
     async def handle_packet(self, packet):
         replies = []
@@ -312,7 +312,8 @@ class PRUDPSession:
         logger.info(f"SYN from {self.addr}")
         self.seq_out = 1
         self.seq_in_expected = 1
-        self._recv_high = 0
+        self._recv_synced = False
+        self._reorder = {}
         self._fragments = []
         self.id_send = 0
         # our connection signature -> client via SYN ACK
@@ -357,25 +358,36 @@ class PRUDPSession:
 
         replies = []
         if packet.has_flag(PRUDPPacket.FLAG_NEED_ACK):
-            replies.append(self._make_ack(packet))
+            replies.append(self._make_ack(packet))  # always ACK, even out-of-order/dupe
 
-        # drop retransmits: seq already consumed; re-ACKed above, not re-dispatched
-        if packet.sequence_id <= self._recv_high:
+        # Latch the in-order cursor to the first DATA sequence we see.
+        if not self._recv_synced:
+            self.seq_in_expected = packet.sequence_id
+            self._recv_synced = True
+
+        diff = (packet.sequence_id - self.seq_in_expected) & 0xFFFF
+        if diff != 0:
+            if diff < 0x8000:
+                self._reorder[packet.sequence_id] = packet  # future: hold until the gap fills
+            # else: already processed (re-ACKed above); drop
             return replies
-        self._recv_high = packet.sequence_id
 
-        # reassemble fragments: part_number > 0 means more fragments follow
-        self._fragments.append(packet.payload)
-        if packet.part_number != 0:
-            return replies
-
-        rmc_payload = b"".join(self._fragments)
-        self._fragments = []
-
-        if self.data_callback and rmc_payload:
-            response = await self.data_callback(self, rmc_payload)
-            if response:
-                replies.extend(self.build_data_packets(packet, response))
+        # In-order: process this packet and any now-contiguous buffered ones.
+        # part_number > 0 means more fragments follow; part 0 is the last.
+        pkt = packet
+        while True:
+            self._fragments.append(pkt.payload)
+            self.seq_in_expected = (self.seq_in_expected + 1) & 0xFFFF
+            if pkt.part_number == 0:
+                rmc_payload = b"".join(self._fragments)
+                self._fragments = []
+                if self.data_callback and rmc_payload:
+                    response = await self.data_callback(self, rmc_payload)
+                    if response:
+                        replies.extend(self.build_data_packets(pkt, response))
+            pkt = self._reorder.pop(self.seq_in_expected, None)
+            if pkt is None:
+                break
         return replies
 
     def build_data_packets(self, request_packet, data):

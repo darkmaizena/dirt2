@@ -10,7 +10,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-_BASE_PID = 10000
+_BASE_PID = 15000
 
 _DB_PATH = Path(
     os.environ.get("DIRT2_ACCOUNTS_DB")

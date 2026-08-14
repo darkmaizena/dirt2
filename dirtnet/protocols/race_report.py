@@ -10,12 +10,13 @@ Methods:
 Each upload is also dumped as JSON under logs/race_reports/ (one file per race)
 to diff per-race vs cumulative stats.
 """
+
 import json
 import logging
 from datetime import datetime
 from pathlib import Path
 
-from game import stat_store, stat_types
+from game import accounts, stat_store, stat_types
 from game.tournament import submit_race
 from quazal.rmc import ProtocolHandler
 
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 _REPORT_DIR = Path(__file__).resolve().parents[1] / "logs" / "race_reports"
 
 # Stats logged per lap to spot per-race vs cumulative behaviour.
-_SUMMARY_IDS = (0x01, 0x02, 0x03, 0x04, 0x06, 0x07, 0x09, 0x0a, 0x0b)
+_SUMMARY_IDS = (0x01, 0x02, 0x03, 0x04, 0x06, 0x07, 0x09, 0x0A, 0x0B)
 
 
 class RaceReportService(ProtocolHandler):
@@ -49,12 +50,14 @@ class RaceReportService(ProtocolHandler):
             pid = getattr(client, "pid", None) or 0
             stat_store.put_many(pid, stats)
             self._dump_json(pid, category, stats)
-            name = getattr(client, "np_online_id", None)
+            name = accounts.username_for(pid)
             stat_bag = {sid: v for (sid, _cls, v) in stats}
             r = submit_race(pid, name, stat_bag)
             if r.get("qualified"):
-                logger.info(f"  -> QUALIFIED: score={r['score']} "
-                            f"{'(new best)' if r.get('improved') else '(kept best)'}")
+                logger.info(
+                    f"  -> QUALIFIED: score={r['score']} "
+                    f"{'(new best)' if r.get('improved') else '(kept best)'}"
+                )
             else:
                 logger.info(f"  -> DID NOT QUALIFY: {r.get('reason')}")
         except Exception as e:
@@ -63,15 +66,22 @@ class RaceReportService(ProtocolHandler):
     def _dump_json(self, pid, category, stats):
         """Write this race's stats to a sequential JSON file and log a one-line
         summary of the key metrics."""
-        entries = [{"id": f"0x{sid:02x}",
-                    "name": stat_types.STAT_NAME.get(sid, "?"),
-                    "type": cls, "value": val}
-                   for sid, cls, val in sorted(stats, key=lambda s: s[0])]
+        entries = [
+            {
+                "id": f"0x{sid:02x}",
+                "name": stat_types.STAT_NAME.get(sid, "?"),
+                "type": cls,
+                "value": val,
+            }
+            for sid, cls, val in sorted(stats, key=lambda s: s[0])
+        ]
         bag = {sid: val for sid, _cls, val in stats}
         report = {
             "race": None,  # sequential index, set below
             "utc": datetime.utcnow().isoformat(timespec="seconds") + "Z",  # noqa: DTZ003
-            "pid": pid, "category": category, "count": len(stats),
+            "pid": pid,
+            "category": category,
+            "count": len(stats),
             "stats": entries,
         }
         _REPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -81,15 +91,18 @@ class RaceReportService(ProtocolHandler):
         path.write_text(json.dumps(report, indent=2))
         summary = ", ".join(
             f"{stat_types.STAT_NAME.get(sid, hex(sid))}={bag[sid]}"
-            for sid in _SUMMARY_IDS if sid in bag)
-        logger.info(f"RaceReport(102) race #{idx}: {len(stats)} stats pid={pid} "
-                    f"cat={category} -> {path.name}")
+            for sid in _SUMMARY_IDS
+            if sid in bag
+        )
+        logger.info(
+            f"RaceReport(102) race #{idx}: {len(stats)} stats pid={pid} "
+            f"cat={category} -> {path.name}"
+        )
         logger.info(f"  key stats: {summary}")
 
     async def handle(self, client, method_id, input_stream, output_stream):
         handler = self.methods.get(method_id)
         if handler is None:
-            logger.info(f"RaceReport method {method_id} "
-                        f"({input_stream.remaining()} bytes) -> ack")
+            logger.info(f"RaceReport method {method_id} ({input_stream.remaining()} bytes) -> ack")
             return
         handler(client, input_stream, output_stream)
